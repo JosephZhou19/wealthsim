@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: wealth_sim_db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wealthsim}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wealthsim}
+      POSTGRES_DB: ${POSTGRES_DB:-wealthsim}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
