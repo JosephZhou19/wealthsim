@@ -5,6 +5,8 @@ class AssetBase(BaseModel):
     initial_value: float
     expected_return: float
     tax_drag: float
+    volatility: float
+    return_volatility: float
 
 class AssetCreate(AssetBase):
     pass

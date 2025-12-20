@@ -38,7 +38,3 @@ def update_asset(asset_name: str, updated_asset: AssetCreate):
     db.close()
     return asset
 
-@router.get("/simulate/{years}")
-def simulate_wealth(years: int):
-    total, asset_totals =WealthService.simulate_wealth(years)
-    return {"years": years, "total_wealth": total, "asset_totals": asset_totals}

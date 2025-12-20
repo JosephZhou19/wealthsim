@@ -7,7 +7,9 @@ def create_asset(db: Session, asset: AssetCreate):
         name=asset.name,
         initial_value=asset.initial_value,
         expected_return=asset.expected_return,
-        tax_drag=asset.tax_drag
+        tax_drag=asset.tax_drag,
+        volatility=asset.volatility,
+        return_volatility=asset.return_volatility
         )
     db.add(db_asset)
     db.commit()
@@ -28,6 +30,8 @@ def update_asset(db: Session, asset_name: str, updated_asset: AssetCreate):
         asset.initial_value = updated_asset.initial_value
         asset.expected_return = updated_asset.expected_return
         asset.tax_drag = updated_asset.tax_drag
+        asset.volatility = updated_asset.volatility
+        asset.return_volatility = updated_asset.return_volatility
         db.commit()
         db.refresh(asset)
     return asset
