@@ -1,5 +1,6 @@
 from app.database.database import SessionLocal
 from app.crud import AssetCrud, ContributionRuleCrud
+from app.models.Asset import Asset
 import numpy as np
 import logging 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,19 @@ class WealthService:
             total += asset_total
         db.close()
         return total, asset_totals
+    @staticmethod
+    def calculate_volatility(returns: list):
+        std_dev = np.std(returns)
+        # Assuming returns are monthly
+        volatility = std_dev * np.sqrt(12)
+        return float(volatility)
+    @staticmethod
+    def create_asset_copy(assets):
+        assets_copy = []
+        for asset in assets:
+            assets_copy.append(Asset(name=asset.name, initial_value=asset.initial_value, expected_return=asset.expected_return, tax_drag=asset.tax_drag, volatility=asset.volatility, return_volatility=asset.return_volatility))
+        return assets_copy
+
     def simulate_advanced_wealth(self, years: int):
         db = SessionLocal()
         assets = AssetCrud.get_assets(db)
@@ -37,7 +51,8 @@ class WealthService:
                     asset_rule_map[asset.name].append(rule)
         paths = []
         for i in range(self.MT_PATHS):
-            paths.append(self.simulate_path(assets, asset_rule_map, years))
+            assets_copy = WealthService.create_asset_copy(assets)
+            paths.append(self.simulate_path(assets_copy, asset_rule_map, years))
         wealth_totals = [path[0] for path in paths]
         p25 = np.percentile(wealth_totals, 25)
         p75 = np.percentile(wealth_totals, 75)
@@ -57,16 +72,17 @@ class WealthService:
             "probability_of_loss": probability_of_loss
         }
     def simulate_path(self, assets, asset_rule_map, years):
-        portfolio_total = 0.0
         peak = sum([asset.initial_value for asset in assets])
+        portfolio_total = peak
         max_drawdown = 0.0
         rng = np.random.default_rng()
         no_growth_total = peak
         isLoss = False
+        original_returns = [asset.expected_return for asset in assets]
         # Simulate monthly growth
         for i in range(years * 12):
-            for asset in assets:
-                asset_total = self.simulate_asset_growth(asset, asset_rule_map[asset.name], rng)
+            for i in range(len(assets)):
+                asset_total = self.simulate_asset_growth(assets[i], asset_rule_map[assets[i].name], original_returns[i], rng)
                 portfolio_total += asset_total
             # calculate draw down
             peak = max(peak, portfolio_total)
@@ -80,23 +96,25 @@ class WealthService:
             isLoss = True
         return portfolio_total, max_dd, isLoss
     
-    def simulate_asset_growth(self, asset, rules, rng: np.random.Generator):
+    def simulate_asset_growth(self, asset, rules, mean_rate, rng: np.random.Generator):
         dt = 1.0 / 12.0
         asset_total = asset.initial_value
         rate = asset.expected_return
         z = rng.normal(0, 1)
-        rate_change = rng.normal(0, asset.return_volatility) * np.sqrt(dt)
+        # Simulating stochastic rate change
+        rate_change =  (mean_rate - rate) * dt + asset.return_volatility * np.sqrt(dt) * rng.normal(0,1) 
         rate += rate_change
         rate = max(rate, 0.0)
-        logger.info(f"Rate: {rate}")
+        asset.expected_return = rate
+        # Simulating monte-carlo asset growth
         growth = np.exp((rate - 0.5 * asset.volatility ** 2) * dt + asset.volatility * np.sqrt(dt) * z)
         new_value = asset_total * growth
         gain = new_value - asset_total
         if gain > 0:
             gain = gain * (1 - asset.tax_drag) 
         asset_total = asset_total + gain + sum([rule.rate for rule in rules])
-        logger.info(f"Asset: {asset.name}, Value: {asset_total}")
-        return asset_total
+        asset.initial_value = asset_total
+        return gain
 
 
 
