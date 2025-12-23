@@ -1,6 +1,8 @@
 from app.database.database import SessionLocal
-from app.crud import AssetCrud, ContributionRuleCrud
+from app.crud import AssetCrud, ContributionRuleCrud, SimulationCrud
 from app.models.Asset import Asset
+from app.schema.SimulationRunBase import SimulationRunBase
+from app.schema.SimulationResultBase import SimulationResultBase
 import numpy as np
 import logging 
 logger = logging.getLogger(__name__)
@@ -39,10 +41,12 @@ class WealthService:
             assets_copy.append(Asset(name=asset.name, initial_value=asset.initial_value, expected_return=asset.expected_return, tax_drag=asset.tax_drag, volatility=asset.volatility, return_volatility=asset.return_volatility))
         return assets_copy
 
-    def simulate_advanced_wealth(self, years: int):
+    def simulate_advanced_wealth(self, years: int, seed: int | None):
         db = SessionLocal()
         assets = AssetCrud.get_assets(db)
         rules = ContributionRuleCrud.get_rules(db)
+        if not assets:
+            return {"error": "No assets found"}
         asset_rule_map = {}
         for asset in assets:
             asset_rule_map[asset.name] = []
@@ -50,9 +54,12 @@ class WealthService:
                 if asset.name == rule.asset_name:
                     asset_rule_map[asset.name].append(rule)
         paths = []
+        if seed is None:
+            seed = np.random.SeedSequence().entropy
+        rng = np.random.default_rng(seed)
         for i in range(self.MT_PATHS):
             assets_copy = WealthService.create_asset_copy(assets)
-            paths.append(self.simulate_path(assets_copy, asset_rule_map, years))
+            paths.append(self.simulate_path(assets_copy, asset_rule_map, years, rng))
         wealth_totals = [path[0] for path in paths]
         p25 = np.percentile(wealth_totals, 25)
         p75 = np.percentile(wealth_totals, 75)
@@ -61,6 +68,11 @@ class WealthService:
         p95 = np.percentile(wealth_totals, 95)
         max_drawdown = max([path[1] for path in paths])
         probability_of_loss = sum([path[2] for path in paths]) / len(paths)
+        metrics={}
+        simulation_run = SimulationRunBase(period=years, seed=str(seed), num_simulations=self.MT_PATHS)
+        simulation_run = SimulationCrud.createSimulationRun(db, simulationRun=simulation_run)
+        simulation_result = SimulationResultBase(run_id=simulation_run.id,final_value_p50=p50, final_value_p25=p25, final_value_p75=p75, final_value_p5=p5, final_value_p95=p95, max_drawdown=max_drawdown, probability_of_loss=probability_of_loss, metrics=metrics)
+        SimulationCrud.createSimulationResult(db, simulationResult=simulation_result)
         db.close()
         return {
             "p5": p5,
@@ -69,19 +81,20 @@ class WealthService:
             "p75": p75,
             "p95": p95,
             "max_drawdown": max_drawdown,
-            "probability_of_loss": probability_of_loss
+            "probability_of_loss": probability_of_loss,
+            "seed": str(seed)
         }
-    def simulate_path(self, assets, asset_rule_map, years):
+    def simulate_path(self, assets, asset_rule_map, years, rng: np.random.Generator):
         peak = sum([asset.initial_value for asset in assets])
         portfolio_total = peak
         max_drawdown = 0.0
-        rng = np.random.default_rng()
         no_growth_total = peak
         isLoss = False
         original_returns = [asset.expected_return for asset in assets]
         # Simulate monthly growth
         for i in range(years * 12):
             for i in range(len(assets)):
+                self.simulate_asset_rate_change(assets[i], original_returns[i], rng)
                 asset_total = self.simulate_asset_growth(assets[i], asset_rule_map[assets[i].name], original_returns[i], rng)
                 portfolio_total += asset_total
             # calculate draw down
@@ -95,17 +108,19 @@ class WealthService:
         if no_growth_total > portfolio_total:
             isLoss = True
         return portfolio_total, max_dd, isLoss
-    
-    def simulate_asset_growth(self, asset, rules, mean_rate, rng: np.random.Generator):
+    def simulate_asset_rate_change(self, asset, mean_rate, rng: np.random.Generator):
         dt = 1.0 / 12.0
-        asset_total = asset.initial_value
         rate = asset.expected_return
-        z = rng.normal(0, 1)
         # Simulating stochastic rate change
         rate_change =  (mean_rate - rate) * dt + asset.return_volatility * np.sqrt(dt) * rng.normal(0,1) 
         rate += rate_change
         rate = max(rate, 0.0)
         asset.expected_return = rate
+    def simulate_asset_growth(self, asset, rules, mean_rate, rng: np.random.Generator):
+        dt = 1.0 / 12.0
+        asset_total = asset.initial_value
+        rate = asset.expected_return
+        z = rng.normal(0, 1)
         # Simulating monte-carlo asset growth
         growth = np.exp((rate - 0.5 * asset.volatility ** 2) * dt + asset.volatility * np.sqrt(dt) * z)
         new_value = asset_total * growth
