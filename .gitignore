@@ -2,6 +2,7 @@
 .env
 .venv/
 venv/
+wealthsim.code-workspace
 
 # Python artifacts
 __pycache__/

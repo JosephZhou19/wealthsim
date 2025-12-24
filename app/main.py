@@ -3,11 +3,25 @@ from app.database.database import Base, engine
 from app.routers.AssetRouter import router as assetRouter
 from app.routers.ContributionRuleRouter import router as contributionRuleRouter
 from app.routers.SimulationRouter import router as simulationRouter
+import os
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 import logging
 
-
+load_dotenv(dotenv_path="../.env")
+ui_url = os.getenv("UI_URL")
+if not ui_url:
+    raise RuntimeError("UI_URL environment variable not set")
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        ui_url, 
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Basic configuration
 logging.basicConfig(
     level=logging.INFO,          # minimum level to log
