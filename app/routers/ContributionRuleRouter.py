@@ -20,10 +20,10 @@ def create_rule(newRule: ContributionRuleCreate):
     db.close()
     return rule
 
-@router.get("/")
-def get_rules():
+@router.get("/{asset_name}")
+def get_rules(asset_name: str):
     db: Session = SessionLocal()
-    rule = ContributionRuleCrud.get_rules(db)
+    rule = ContributionRuleCrud.get_rules(db, asset_name)
     db.close()
     return rule
 @router.delete("/{rule_name}")

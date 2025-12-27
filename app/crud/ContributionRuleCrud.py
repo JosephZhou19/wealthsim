@@ -14,8 +14,8 @@ def create_contribution_rule(db: Session, contribution_rule: ContributionRuleCre
     db.refresh(db_rule)
     return db_rule
 
-def get_rules(db: Session):
-    return db.query(ContributionRule).all()
+def get_rules(db: Session, asset_name: str):
+    return db.query(ContributionRule).filter(ContributionRule.asset_name==asset_name).all()
 def delete_contribution_rule(db: Session, rule_name: str):
     db_rule = db.query(ContributionRule).filter(ContributionRule.name == rule_name).first()
     if db_rule:
