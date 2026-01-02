@@ -51,8 +51,9 @@ class WealthService:
         for i in range(len(path_data[0][0])):
             percentiles = dict()
             totals_for_year = [path[0][i] for path in path_data]
+            percentiles["year"] = i
             percentiles["p5"] = np.percentile(totals_for_year, 5)
-            percentiles["p25"] = np.percentile(totals_for_year, 25)
+            percentiles["p25"] = np.percentile(totals_for_year, 25)  
             percentiles["p50"] = np.percentile(totals_for_year, 50)
             percentiles["p75"] = np.percentile(totals_for_year, 75)
             percentiles["p95"] = np.percentile(totals_for_year, 95)
@@ -62,7 +63,7 @@ class WealthService:
     def simulate_advanced_wealth(self, years: int, seed: int | None):
         db = SessionLocal()
         assets = AssetCrud.get_assets(db)
-        rules = ContributionRuleCrud.get_rules(db)
+        rules = ContributionRuleCrud.get_all_rules(db)
         if not assets:
             return {"error": "No assets found"}
         asset_rule_map = {}
@@ -78,7 +79,6 @@ class WealthService:
         for i in range(self.MT_PATHS):
             assets_copy = WealthService.create_asset_copy(assets)
             paths.append(self.simulate_path(assets_copy, asset_rule_map, years, rng))
-        wealth_totals = [path[0][-1] for path in paths]
         # returns year by year data for graphing
         per_year_percentiles = WealthService.calculate_pear_year_percentiles(paths)
         p25 = per_year_percentiles[-1]["p25"]
@@ -113,8 +113,10 @@ class WealthService:
         peak = sum([asset.initial_value for asset in assets])
         portfolio_total = peak
         max_drawdown = 0.0
+        # For tracking total assets without investment to check for loss
         no_growth_total = peak
         isLoss = False
+        # For keeping asset rate change realistic
         original_returns = [asset.expected_return for asset in assets]
         # Simulate monthly growth
         for i in range(years * 12):
@@ -122,19 +124,20 @@ class WealthService:
                 per_year_data.append(portfolio_total)
             for i in range(len(assets)):
                 self.simulate_asset_rate_change(assets[i], original_returns[i], rng)
-                asset_total = self.simulate_asset_growth(assets[i], asset_rule_map[assets[i].name], original_returns[i], rng)
-                portfolio_total += asset_total
+                asset_increase = self.simulate_asset_growth(assets[i], asset_rule_map[assets[i].name], rng)
+                portfolio_total += asset_increase
             # calculate draw down
             peak = max(peak, portfolio_total)
             drawdown = (peak - portfolio_total) / peak
-            max_dd = max(max_drawdown, drawdown)
+            max_drawdown = max(max_drawdown, drawdown)
             for asset in assets:
                 asset_contribution = sum([rule.rate for rule in asset_rule_map[asset.name]])
                 portfolio_total += asset_contribution
-                no_growth_total += asset_contribution   
+                no_growth_total += asset_contribution
+        per_year_data.append(portfolio_total)   
         if no_growth_total > portfolio_total:
             isLoss = True
-        return per_year_data, max_dd, isLoss
+        return per_year_data, max_drawdown, isLoss
     
     def simulate_asset_rate_change(self, asset, mean_rate, rng: np.random.Generator):
         dt = 1.0 / 12.0
@@ -145,7 +148,7 @@ class WealthService:
         rate = max(rate, 0.0)
         asset.expected_return = rate
 
-    def simulate_asset_growth(self, asset, rules, mean_rate, rng: np.random.Generator):
+    def simulate_asset_growth(self, asset, rules, rng: np.random.Generator):
         dt = 1.0 / 12.0
         asset_total = asset.initial_value
         rate = asset.expected_return

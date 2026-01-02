@@ -16,14 +16,22 @@ def create_contribution_rule(db: Session, contribution_rule: ContributionRuleCre
 
 def get_rules(db: Session, asset_name: str):
     return db.query(ContributionRule).filter(ContributionRule.asset_name==asset_name).all()
-def get_rules(db: Session):
+
+def get_all_rules(db: Session):
     return db.query(ContributionRule).all()
+
+def delete_all_rules_for_asset(db: Session, asset_name: str):
+    db_rules = db.query(ContributionRule).filter(ContributionRule.asset_name == asset_name).delete()
+    db.commit()
+    return db_rules
+
 def delete_contribution_rule(db: Session, rule_name: str):
     db_rule = db.query(ContributionRule).filter(ContributionRule.name == rule_name).first()
     if db_rule:
         db.delete(db_rule)
         db.commit()
     return db_rule
+
 def update_contribution_rule(db: Session, rule_name: str, updated_rule: ContributionRuleCreate):
     db_rule = db.query(ContributionRule).filter(ContributionRule.name == rule_name).first()
     if db_rule:

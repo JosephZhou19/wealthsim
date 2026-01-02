@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.Asset import Asset
 from app.schema.AssetBase import AssetCreate
+from app.crud.ContributionRuleCrud import delete_all_rules_for_asset
 
 def create_asset(db: Session, asset: AssetCreate):
     db_asset = Asset(
@@ -24,6 +25,7 @@ def get_asset(db: Session, asset_name: str):
 def delete_asset(db: Session, asset_name: str):
     asset = db.query(Asset).filter(Asset.name == asset_name).first()
     if asset:
+        delete_all_rules_for_asset(db, asset_name)
         db.delete(asset)
         db.commit()
     return asset
