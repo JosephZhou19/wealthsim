@@ -33,14 +33,15 @@ def simulate_basic_wealth(years: int):
     return {"years": years, "total_wealth": total, "asset_totals": asset_totals}
 
 @router.get("/advanced/{years}")
-def simulate_advanced_wealth(years: int, seed: Optional[int] = Query(default=None)):
+def simulate_advanced_wealth(years: int, seed: Optional[int] = Query(default=None), AI_analysis: Optional[bool] = Query(default=False)):
     wealth_service = WealthService(1000)
     result = wealth_service.simulate_advanced_wealth(years, seed)
-    db: Session = SessionLocal()
-    assets = AssetCrud.get_assets(db)
-    rules = ContributionRuleCrud.get_all_rules(db)
-    db.close()
-    payload = AIService.build_analysis_payload(assets, rules, result)
-    ai_response = AIService.generate_ai_analysis(payload)
-    result["AI_response"] = ai_response
+    if AI_analysis:
+        db: Session = SessionLocal()
+        assets = AssetCrud.get_assets(db)
+        rules = ContributionRuleCrud.get_all_rules(db)
+        db.close()
+        payload = AIService.build_analysis_payload(assets, rules, result)
+        ai_response = AIService.generate_ai_analysis(payload)
+        result["AI_response"] = ai_response
     return result
