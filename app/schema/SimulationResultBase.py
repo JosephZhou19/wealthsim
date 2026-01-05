@@ -11,6 +11,8 @@ class SimulationResultBase(BaseModel):
     max_drawdown: float
     probability_of_loss: float
     metrics: dict
+    class Config:
+        from_attributes = True
 
 class SimulationResultCreate(SimulationResultBase):
     pass

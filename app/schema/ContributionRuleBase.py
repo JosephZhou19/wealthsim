@@ -4,6 +4,8 @@ class ContributionRuleBase(BaseModel):
     name: str
     rate: float
     asset_name: str
+    class Config:
+        from_attributes = True
 
 class ContributionRuleCreate(ContributionRuleBase):
     pass

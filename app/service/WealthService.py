@@ -10,7 +10,6 @@ class WealthService:
 
     def __init__(self, path: int):
         self.MT_PATHS = path
-
     @staticmethod
     def simulate_basic_wealth(years: int):
         db = SessionLocal()
@@ -59,7 +58,8 @@ class WealthService:
             percentiles["p95"] = np.percentile(totals_for_year, 95)
             yearly_results.append(percentiles)
         return yearly_results
-    
+
+
     def simulate_advanced_wealth(self, years: int, seed: int | None):
         db = SessionLocal()
         assets = AssetCrud.get_assets(db)
@@ -95,6 +95,7 @@ class WealthService:
         SimulationCrud.createSimulationResult(db, simulationResult=simulation_result)
         db.close()
         return {
+            "years": years,
             "final_result": {
                 "p5": p5,
                 "p25": p25,
@@ -104,7 +105,7 @@ class WealthService:
                 "max_drawdown": max_drawdown,
                 "probability_of_loss": probability_of_loss,
                 "seed": str(seed)
-            },
+            },   
             "yearly_timeline" : per_year_percentiles
         }
     

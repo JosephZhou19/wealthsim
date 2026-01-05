@@ -4,6 +4,8 @@ class SimulationRunBase(BaseModel):
     period: int
     seed: str
     num_simulations: int
+    class Config:
+        from_attributes = True
 
 class SimulationRunCreate(SimulationRunBase):
     pass

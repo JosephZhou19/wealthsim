@@ -7,6 +7,8 @@ class AssetBase(BaseModel):
     tax_drag: float
     volatility: float
     return_volatility: float
+    class Config:
+        from_attributes = True
 
 class AssetCreate(AssetBase):
     pass

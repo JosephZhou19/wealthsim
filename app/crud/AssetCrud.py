@@ -19,6 +19,7 @@ def create_asset(db: Session, asset: AssetCreate):
 
 def get_assets(db: Session):
     return db.query(Asset).all()
+
 def get_asset(db: Session, asset_name: str):
     return db.query(Asset).filter(Asset.name == asset_name).first()
 

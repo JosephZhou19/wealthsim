@@ -4,9 +4,9 @@ from fastapi import APIRouter, Query
 from sqlalchemy.orm import Session
 
 from app.database.database import SessionLocal
-from app.schema.AssetBase import AssetCreate
-from app.crud import AssetCrud, SimulationCrud
+from app.crud import AssetCrud, SimulationCrud, ContributionRuleCrud
 from app.service.WealthService import WealthService
+from app.service.AIService import AIService
 
 router = APIRouter(
     prefix="/simulate",
@@ -35,5 +35,12 @@ def simulate_basic_wealth(years: int):
 @router.get("/advanced/{years}")
 def simulate_advanced_wealth(years: int, seed: Optional[int] = Query(default=None)):
     wealth_service = WealthService(1000)
-    paths = wealth_service.simulate_advanced_wealth(years, seed)
-    return {"years": years, "paths": paths}
+    result = wealth_service.simulate_advanced_wealth(years, seed)
+    db: Session = SessionLocal()
+    assets = AssetCrud.get_assets(db)
+    rules = ContributionRuleCrud.get_all_rules(db)
+    db.close()
+    payload = AIService.build_analysis_payload(assets, rules, result)
+    ai_response = AIService.generate_ai_analysis(payload)
+    result["AI_response"] = ai_response
+    return result
