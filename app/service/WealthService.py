@@ -91,11 +91,14 @@ class WealthService:
         metrics={}
         simulation_run = SimulationRunBase(period=years, seed=str(seed), num_simulations=self.MT_PATHS)
         simulation_run = SimulationCrud.createSimulationRun(db, simulationRun=simulation_run)
-        simulation_result = SimulationResultBase(run_id=simulation_run.id,final_value_p50=p50, final_value_p25=p25, final_value_p75=p75, final_value_p5=p5, final_value_p95=p95, max_drawdown=max_drawdown, probability_of_loss=probability_of_loss, metrics=metrics)
+        run_id = simulation_run.id
+        simulation_result = SimulationResultBase(run_id=run_id,final_value_p50=p50, final_value_p25=p25, final_value_p75=p75, final_value_p5=p5, final_value_p95=p95, max_drawdown=max_drawdown, probability_of_loss=probability_of_loss, metrics=metrics)
         SimulationCrud.createSimulationResult(db, simulationResult=simulation_result)
         db.close()
         return {
             "years": years,
+            "run_id": run_id,
+            "seed": str(seed),
             "final_result": {
                 "p5": p5,
                 "p25": p25,
@@ -103,8 +106,7 @@ class WealthService:
                 "p75": p75,
                 "p95": p95,
                 "max_drawdown": max_drawdown,
-                "probability_of_loss": probability_of_loss,
-                "seed": str(seed)
+                "probability_of_loss": probability_of_loss
             },   
             "yearly_timeline" : per_year_percentiles
         }

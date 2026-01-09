@@ -3,6 +3,7 @@ from app.database.database import Base, engine
 from app.routers.AssetRouter import router as assetRouter
 from app.routers.ContributionRuleRouter import router as contributionRuleRouter
 from app.routers.SimulationRouter import router as simulationRouter
+from app.routers.ProfileRouter import router as profileRouter
 import os
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 app.include_router(assetRouter)
 app.include_router(contributionRuleRouter)
 app.include_router(simulationRouter)
+app.include_router(profileRouter)
 # Create tables automatically on startup
 @app.on_event("startup")
 def startup():

@@ -1,14 +1,14 @@
 # WealthSim Project
 This is a Python application that handles creating monte carlo simulations for various asset classes
 
-This project includes a PostgreSQL DB, a FastAPI Python Service, and connects to OpenAI for qualitative analysis.
+This project includes a PostgreSQL DB, a FastAPI Python Service, and an AI-powered, context-aware chat bot for advising.
 
 ## Architecture
 The architecture for this project is rather simple.
 
 React (vite) -> Python (FastApi) -> PostgreSQL DB
                     ↳ Monte Carlo Engine
-                    ↳ AI Interpretation Layer
+                    ↳ AI ChatBot Layer
 
 There is no plans to deploy this application since it stores financial data.
 

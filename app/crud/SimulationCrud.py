@@ -4,6 +4,7 @@ from app.schema.SimulationResultBase import SimulationResultCreate
 from app.schema.SimulationRunBase import SimulationRunCreate
 from app.models.SimulationRun import SimulationRun
 from app.models.SimulationResult import SimulationResult
+
 def createSimulationRun(db: Session, simulationRun: SimulationRunCreate):
     db_simulation_run = SimulationRun(
         period=simulationRun.period,
@@ -32,5 +33,12 @@ def createSimulationResult(db: Session, simulationResult: SimulationResultCreate
 
 def getSimulationRuns(db: Session):
     return db.query(SimulationRun).all()
+
+def getSimulationRun(db: Session, id):
+    return db.query(SimulationRun).filter(SimulationRun.id == id).first()
+
 def getSimulationResults(db: Session):
     return db.query(SimulationResult).all()
+
+def getSimulationResult(db:Session, id):
+    return db.query(SimulationResult).filter(SimulationResult.run_id == id).first()
